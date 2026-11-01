@@ -1,0 +1,7 @@
+pymobiledevice3==11.45.0
+fastapi
+uvicorn[standard]
+httpx
+packaging
+pytest
+pytest-asyncio

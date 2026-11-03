@@ -23,3 +23,13 @@ async def test_discovery_lists_connected_only(farm_services):
 
 
 # 2 Missing Developer Mode
+async def test_missing_developer_mode(farm_services, mgr):
+    _, farm = farm_services
+    farm.devices["UDID-A"].developer_mode = False
+    with pytest.raises(DeveloperModeDisabled) as e:
+        await mgr.set_location("UDID-A", 10, 10)
+    assert "Developer Mode" in e.value.hint
+    assert farm.simulated == {}
+
+
+# 3 Missing developer image

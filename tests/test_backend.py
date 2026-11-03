@@ -33,3 +33,10 @@ async def test_missing_developer_mode(farm_services, mgr):
 
 
 # 3 Missing developer image
+async def test_missing_developer_image(farm_services, mgr):
+    _, farm = farm_services
+    farm.devices["UDID-A"].image_mounted = False
+    with pytest.raises(DeveloperImageMissing):
+        await mgr.set_location("UDID-A", 10, 10)
+
+

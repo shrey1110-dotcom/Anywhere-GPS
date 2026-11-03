@@ -114,3 +114,19 @@ async def test_cable_disconnect(mgr, farm_services):
 
 
 # 9 Reconnection: no automatic re-apply; explicit set works again
+async def test_reconnect_no_auto_reapply(mgr, farm_services):
+    _, farm = farm_services
+    await mgr.set_location(None, 1, 1)
+    farm.unplug("UDID-A")
+    for _ in range(50):
+        await asyncio.sleep(0.01)
+        if mgr.status("UDID-A")["state"] == "lost":
+            break
+    farm.plug("UDID-A")
+    await asyncio.sleep(0.05)
+    assert "UDID-A" not in farm.simulated and not mgr.status("UDID-A")["simulation_active"]
+    snap = await mgr.set_location(None, 7, 8)
+    assert snap["simulation_active"] and farm.simulated["UDID-A"] == (7, 8)
+    await mgr.shutdown()
+
+

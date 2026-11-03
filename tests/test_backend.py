@@ -40,3 +40,10 @@ async def test_missing_developer_image(farm_services, mgr):
         await mgr.set_location("UDID-A", 10, 10)
 
 
+async def test_not_paired(farm_services, mgr):
+    farm_services[1].devices["UDID-A"].paired = False
+    with pytest.raises(NotPaired):
+        await mgr.set_location("UDID-A", 10, 10)
+
+
+# 4 Invalid coordinates

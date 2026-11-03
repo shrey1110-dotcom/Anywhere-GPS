@@ -100,3 +100,17 @@ async def test_restore_without_session_opens_channel_and_clears(mgr, farm_servic
 
 
 # 8 Cable disconnect is detected and never reported as active
+async def test_cable_disconnect(mgr, farm_services):
+    _, farm = farm_services
+    await mgr.set_location(None, 1, 1)
+    farm.unplug("UDID-A")
+    for _ in range(50):
+        await asyncio.sleep(0.01)
+        if mgr.status("UDID-A")["state"] == "lost":
+            break
+    snap = mgr.status("UDID-A")
+    assert snap["state"] == "lost" and snap["simulation_active"] is False
+    assert snap["error"]["code"] == "device_unreachable"
+
+
+# 9 Reconnection: no automatic re-apply; explicit set works again

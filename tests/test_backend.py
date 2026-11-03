@@ -82,3 +82,14 @@ async def test_repeated_set_reuses_channel(mgr, farm_services):
 
 
 # 7 Restore
+async def test_restore(mgr, farm_services):
+    await mgr.set_location(None, 1, 1)
+    snap = await mgr.clear_location(None)
+    assert snap["state"] == "idle" and not snap["simulation_active"] and snap["target"] is None
+    assert "UDID-A" not in farm_services[1].simulated
+    # honesty: the command was accepted but NOT independently verified
+    assert snap["last_restore"]["clear_command_accepted"] is True
+    assert snap["last_restore"]["verified"] is False
+    assert farm_services[1].open_channels["UDID-A"] == 0
+
+

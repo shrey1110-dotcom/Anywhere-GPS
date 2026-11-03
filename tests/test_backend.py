@@ -71,3 +71,14 @@ async def test_valid_set(mgr, farm_services):
 
 
 # 6 Repeated requests reuse one channel
+async def test_repeated_set_reuses_channel(mgr, farm_services):
+    await mgr.set_location(None, 1, 1)
+    await mgr.set_location(None, 2, 2)
+    await mgr.set_location(None, 3, 3)
+    assert farm_services[1].open_channels["UDID-A"] == 1
+    assert farm_services[1].simulated["UDID-A"] == (3, 3)
+    assert mgr.status("UDID-A")["target"] == {"latitude": 3, "longitude": 3}
+    await mgr.shutdown()
+
+
+# 7 Restore

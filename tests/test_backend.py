@@ -47,3 +47,11 @@ async def test_not_paired(farm_services, mgr):
 
 
 # 4 Invalid coordinates
+@pytest.mark.parametrize("lat,lon", [(91, 0), (-90.0001, 0), (0, 180.5), (0, -181), (float("nan"), 0),
+                                     (float("inf"), 0), (None, 0), ("1", 2), (True, 0)])
+async def test_invalid_coordinates(mgr, farm_services, lat, lon):
+    with pytest.raises(InvalidCoordinates):
+        await mgr.set_location("UDID-A", lat, lon)
+    assert farm_services[1].simulated == {}
+
+

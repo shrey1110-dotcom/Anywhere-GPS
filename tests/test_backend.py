@@ -63,3 +63,11 @@ async def test_boundary_coordinates_ok(mgr, lat, lon):
 
 
 # 5 Valid simulation
+async def test_valid_set(mgr, farm_services):
+    snap = await mgr.set_location(None, 40.690008, -74.045843)
+    assert snap["state"] == "active" and snap["simulation_active"]
+    assert farm_services[1].simulated["UDID-A"] == (40.690008, -74.045843)
+    await mgr.shutdown()
+
+
+# 6 Repeated requests reuse one channel

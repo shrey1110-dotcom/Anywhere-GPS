@@ -93,3 +93,10 @@ async def test_restore(mgr, farm_services):
     assert farm_services[1].open_channels["UDID-A"] == 0
 
 
+async def test_restore_without_session_opens_channel_and_clears(mgr, farm_services):
+    farm_services[1].simulated["UDID-A"] = (5, 5)   # e.g. left over from before a backend restart
+    await mgr.clear_location(None)
+    assert "clear" in farm_services[1].calls
+
+
+# 8 Cable disconnect is detected and never reported as active

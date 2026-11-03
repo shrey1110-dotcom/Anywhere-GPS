@@ -55,3 +55,11 @@ async def test_invalid_coordinates(mgr, farm_services, lat, lon):
     assert farm_services[1].simulated == {}
 
 
+@pytest.mark.parametrize("lat,lon", [(90, 180), (-90, -180), (0, 0)])
+async def test_boundary_coordinates_ok(mgr, lat, lon):
+    snap = await mgr.set_location("UDID-A", lat, lon)
+    assert snap["simulation_active"]
+    await mgr.shutdown()
+
+
+# 5 Valid simulation

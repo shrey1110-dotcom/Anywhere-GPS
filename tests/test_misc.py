@@ -42,3 +42,19 @@ def test_favorites_roundtrip(settings):
         assert c.get("/api/favorites").json() == []
 
 
+async def test_geocoder_rate_limit_and_cache(tmp_path):
+    hits = []
+
+    def handler(req: httpx.Request):
+        hits.append(req.url.params["q"])
+        return httpx.Response(200, json=[{"display_name": "Paris", "lat": "48.85", "lon": "2.35"}])
+    s = Settings(home=tmp_path, geocode_min_interval=5)
+    g = Geocoder(s, httpx.AsyncClient(transport=httpx.MockTransport(handler), headers={"User-Agent": "t"}))
+    assert (await g.search("paris"))[0]["latitude"] == 48.85
+    assert await g.search("Paris")      # cache hit, no network
+    assert len(hits) == 1
+    with pytest.raises(RateLimited):
+        await g.search("london")        # 2nd distinct query inside the interval is refused, not queued
+    assert len(hits) == 1
+
+

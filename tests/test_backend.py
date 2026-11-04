@@ -178,3 +178,10 @@ def test_app_lifespan_shutdown_restores(settings):
 
 
 # 11 Unsupported iOS
+async def test_unsupported_ios(farm_services, mgr):
+    farm_services[1].devices["UDID-A"].ios_version = "16.7"
+    with pytest.raises(UnsupportedIOSVersion):
+        await mgr.set_location(None, 1, 1)
+
+
+# 12 Multiple iPhones

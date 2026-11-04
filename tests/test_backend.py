@@ -146,3 +146,16 @@ async def test_retries_are_bounded(mgr, farm_services):
     assert 99 - farm_services[1].tunnel_failures == 3
 
 
+async def test_retry_helper_does_not_retry_config_errors():
+    calls = 0
+
+    async def op():
+        nonlocal calls
+        calls += 1
+        raise DeveloperModeDisabled("x")
+    with pytest.raises(DeveloperModeDisabled):
+        await retry_with_backoff(op, attempts=5, base=0)
+    assert calls == 1
+
+
+# 10 Backend termination restores

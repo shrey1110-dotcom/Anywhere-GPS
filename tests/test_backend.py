@@ -260,3 +260,5 @@ def test_cross_origin_requests_blocked(settings):
         assert c.get("/api/health", headers={"Origin": "http://127.0.0.1:8765"}).status_code == 200
 
 
+def test_default_bind_is_localhost(settings):
+    assert settings.host == "127.0.0.1"

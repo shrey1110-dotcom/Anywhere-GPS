@@ -197,3 +197,22 @@ async def test_multiple_devices_require_explicit_choice(farm_services, mgr):
     await mgr.shutdown()
 
 
+async def test_concurrent_conflicting_requests_rejected(farm_services):
+    services, farm = farm_services
+    gate = asyncio.Event()
+    orig = services.simulator.open
+
+    async def slow_open(udid):
+        await gate.wait()
+        return await orig(udid)
+    services.simulator.open = slow_open
+    m = SessionManager(services, op_timeout=2, backoff_base=0, monitor_interval=5)
+    t = asyncio.create_task(m.set_location(None, 1, 1))
+    await asyncio.sleep(0.05)
+    with pytest.raises(SessionBusy):
+        await m.set_location(None, 2, 2)
+    gate.set()
+    await t
+    await m.shutdown()
+
+

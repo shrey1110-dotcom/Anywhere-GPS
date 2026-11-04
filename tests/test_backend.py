@@ -137,3 +137,12 @@ async def test_transient_tunnel_failure_retried(mgr, farm_services):
     await mgr.shutdown()
 
 
+async def test_retries_are_bounded(mgr, farm_services):
+    farm_services[1].tunnel_failures = 99
+    with pytest.raises(Exception) as e:
+        await mgr.set_location(None, 1, 1)
+    assert e.value.code == "tunnel_failed"
+    assert mgr.status("UDID-A")["state"] == "error" and not mgr.status("UDID-A")["simulation_active"]
+    assert 99 - farm_services[1].tunnel_failures == 3
+
+

@@ -58,3 +58,12 @@ async def test_geocoder_rate_limit_and_cache(tmp_path):
     assert len(hits) == 1
 
 
+def test_compat_report_rejects_unevidenced_claims():
+    bad = {"app": "ADP Mobile", "outcome": "approved_test_acceptance_verified", "physical_device": "iPhone 15 / 18.0"}
+    assert cr.validate_entry(bad)       # needs authorization_reference
+    ok = {"app": "ADP Mobile", "outcome": "gps_permission_behavior_observed", "physical_device": "iPhone 15 / 18.0"}
+    rep = cr.build_report([bad, ok])
+    adp = next(r for r in rep["rows"] if r["app"] == "ADP Mobile")
+    assert adp["outcomes"] == ["gps_permission_behavior_observed"] and len(rep["rejected_entries"]) == 1
+    assert all(r["outcomes"] == ["not_tested"] for r in rep["rows"] if r["app"] != "ADP Mobile")
+    assert cr.build_report([])["rows"][0]["outcomes"] == ["not_tested"]

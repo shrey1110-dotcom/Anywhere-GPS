@@ -32,3 +32,13 @@ def test_restore_verify_endpoint(settings):
         assert c.get("/api/session").json()["last_restore"]["verified"] is True
 
 
+def test_favorites_roundtrip(settings):
+    services, _ = make_mock_services()
+    with TestClient(create_app(settings, services)) as c:
+        f = c.post("/api/favorites", json={"name": "Home", "latitude": 1.5, "longitude": 2.5}).json()
+        assert c.get("/api/favorites").json() == [f]
+        assert c.post("/api/favorites", json={"name": "x", "latitude": 99, "longitude": 0}).status_code == 422
+        assert c.delete(f"/api/favorites/{f['id']}").json() == {"removed": True}
+        assert c.get("/api/favorites").json() == []
+
+

@@ -130,3 +130,10 @@ async def test_reconnect_no_auto_reapply(mgr, farm_services):
     await mgr.shutdown()
 
 
+async def test_transient_tunnel_failure_retried(mgr, farm_services):
+    farm_services[1].tunnel_failures = 2
+    snap = await mgr.set_location(None, 1, 1)
+    assert snap["simulation_active"]
+    await mgr.shutdown()
+
+

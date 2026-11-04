@@ -229,3 +229,16 @@ async def test_connect_timeout(farm_services):
 
 
 # 13 User-visible error reporting through the HTTP API
+def test_api_errors_are_actionable(settings):
+    services, farm = make_mock_services()
+    farm.add("U1", developer_mode=False)
+    with TestClient(create_app(settings, services)) as c:
+        r = c.post("/api/location", json={"latitude": 1, "longitude": 2})
+        assert r.status_code == 412
+        body = r.json()
+        assert body["code"] == "developer_mode_disabled" and "Developer Mode" in body["hint"]
+        r = c.post("/api/location", json={"latitude": 200, "longitude": 2})
+        assert r.status_code == 422 and r.json()["code"] == "invalid_coordinates"
+        assert c.get("/api/health").json()["mock"] is True
+
+

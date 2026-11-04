@@ -159,3 +159,12 @@ async def test_retry_helper_does_not_retry_config_errors():
 
 
 # 10 Backend termination restores
+async def test_graceful_shutdown_clears(mgr, farm_services):
+    await mgr.set_location(None, 1, 1)
+    await mgr.shutdown()
+    assert "clear" in farm_services[1].calls
+    assert farm_services[1].simulated == {}
+    assert farm_services[1].open_channels["UDID-A"] == 0
+    assert mgr.status("UDID-A")["state"] == "idle"
+
+

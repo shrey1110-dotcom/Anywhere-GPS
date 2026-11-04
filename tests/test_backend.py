@@ -185,3 +185,15 @@ async def test_unsupported_ios(farm_services, mgr):
 
 
 # 12 Multiple iPhones
+async def test_multiple_devices_require_explicit_choice(farm_services, mgr):
+    _, farm = farm_services
+    farm.add("UDID-B")
+    with pytest.raises(MultipleDevices):
+        await mgr.set_location(None, 1, 1)
+    await mgr.set_location("UDID-B", 1, 1)
+    assert "UDID-A" not in farm.simulated and "UDID-B" in farm.simulated
+    with pytest.raises(DeviceNotFound):
+        await mgr.set_location("NOPE", 1, 1)
+    await mgr.shutdown()
+
+

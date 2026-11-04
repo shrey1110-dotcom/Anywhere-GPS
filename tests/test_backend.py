@@ -216,3 +216,16 @@ async def test_concurrent_conflicting_requests_rejected(farm_services):
     await m.shutdown()
 
 
+async def test_connect_timeout(farm_services):
+    services, _ = farm_services
+
+    async def hang(udid):
+        await asyncio.sleep(10)
+    services.simulator.open = hang
+    m = SessionManager(services, op_timeout=0.05, connect_attempts=2, backoff_base=0, monitor_interval=5)
+    with pytest.raises(Exception) as e:
+        await m.set_location(None, 1, 1)
+    assert e.value.code == "service_timeout"
+
+
+# 13 User-visible error reporting through the HTTP API

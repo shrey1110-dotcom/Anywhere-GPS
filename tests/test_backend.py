@@ -249,3 +249,14 @@ def test_api_no_device(settings):
         assert r.status_code == 404 and r.json()["code"] == "device_not_found"
 
 
+def test_cross_origin_requests_blocked(settings):
+    services, farm = make_mock_services()
+    farm.add("U1")
+    with TestClient(create_app(settings, services)) as c:
+        r = c.post("/api/location", json={"latitude": 1, "longitude": 2}, headers={"Origin": "https://evil.example"})
+        assert r.status_code == 403 and farm.simulated == {}
+        r = c.get("/api/health", headers={"Host": "attacker.example"})
+        assert r.status_code == 403
+        assert c.get("/api/health", headers={"Origin": "http://127.0.0.1:8765"}).status_code == 200
+
+

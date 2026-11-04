@@ -242,3 +242,10 @@ def test_api_errors_are_actionable(settings):
         assert c.get("/api/health").json()["mock"] is True
 
 
+def test_api_no_device(settings):
+    services, _ = make_mock_services()
+    with TestClient(create_app(settings, services)) as c:
+        r = c.post("/api/location/clear", json={})
+        assert r.status_code == 404 and r.json()["code"] == "device_not_found"
+
+

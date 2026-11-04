@@ -168,3 +168,13 @@ async def test_graceful_shutdown_clears(mgr, farm_services):
     assert mgr.status("UDID-A")["state"] == "idle"
 
 
+def test_app_lifespan_shutdown_restores(settings):
+    services, farm = make_mock_services()
+    farm.add("U1")
+    with TestClient(create_app(settings, services)) as c:
+        assert c.post("/api/location", json={"latitude": 1, "longitude": 2}).status_code == 200
+        assert farm.simulated["U1"] == (1, 2)
+    assert farm.simulated == {} and farm.open_channels["U1"] == 0
+
+
+# 11 Unsupported iOS

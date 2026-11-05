@@ -1,0 +1,17 @@
+:root{--bg:#0f1115;--panel:#171a21;--line:#262b36;--text:#e8eaf0;--muted:#8b93a7;--accent:#3b82f6;--good:#16a34a;--warn:#d97706;--bad:#dc2626}
+*{box-sizing:border-box}body{margin:0;font:14px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
+.app{display:grid;grid-template-columns:340px 1fr;height:100vh;position:relative}
+.mockbar{position:fixed;top:0;left:0;right:0;z-index:2000;background:#b45309;color:#fff;text-align:center;padding:4px;font-weight:600;font-size:12px}
+aside{background:var(--panel);border-right:1px solid var(--line);padding:18px;overflow:auto;display:flex;flex-direction:column;gap:14px}
+h1{margin:0;font-size:22px}section{display:flex;flex-direction:column;gap:8px}label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+input,select{background:#0f1218;border:1px solid var(--line);color:var(--text);padding:9px;border-radius:8px;width:100%;min-width:0}
+.row{display:flex;gap:6px}button{border:0;border-radius:10px;padding:10px 14px;background:#2a303d;color:var(--text);font-weight:600;cursor:pointer}
+button:disabled{opacity:.4;cursor:not-allowed}button.primary{background:var(--accent);padding:15px;font-size:16px}button.restore{background:var(--good);padding:15px;font-size:16px}button.ghost{background:transparent;border:1px solid var(--line)}
+.status{display:flex;align-items:center;gap:8px;font-weight:600}.dot{width:10px;height:10px;border-radius:50%;background:var(--muted)}
+.good .dot{background:var(--good)}.warn .dot{background:var(--warn)}.bad .dot{background:var(--bad)}
+.muted{color:var(--muted);font-size:12px}.problem{background:#2a1a1a;border:1px solid #5b2323;padding:10px;border-radius:8px;font-size:13px}.note{background:#16202e;padding:8px;border-radius:8px;font-size:12px}
+.state{font-weight:700;letter-spacing:.05em}.state.active{color:var(--good)}.state.lost,.state.error{color:var(--bad)}
+.result,.fav span{cursor:pointer;padding:6px 8px;border-radius:6px;font-size:13px}.result:hover,.fav span:hover{background:#222836}
+.fav{display:flex;justify-content:space-between;align-items:center}.x{background:none;padding:2px 8px}
+.map{height:100%;width:100%}.pin div{width:22px;height:22px;background:var(--accent);border:3px solid #fff;border-radius:50% 50% 50% 0;transform:rotate(-45deg)}
+@media(max-width:800px){.app{grid-template-columns:1fr;grid-template-rows:auto 60vh}}

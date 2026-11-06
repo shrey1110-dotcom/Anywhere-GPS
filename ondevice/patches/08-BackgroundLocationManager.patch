@@ -1,0 +1,98 @@
+diff --git a/StikDebug/Services/BackgroundLocationManager.swift b/StikDebug/Services/BackgroundLocationManager.swift
+--- a/StikDebug/Services/BackgroundLocationManager.swift
++++ b/StikDebug/Services/BackgroundLocationManager.swift
+@@ -5,22 +5,27 @@
+ 
+ import CoreLocation
+ import UIKit
++import Combine
+ 
+-final class BackgroundLocationManager: NSObject, CLLocationManagerDelegate {
++final class BackgroundLocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
+     static let shared = BackgroundLocationManager()
+ 
+     private let locationManager = CLLocationManager()
+     private var isRunning = false
+     private var activityCount = 0
+     private var isRequestingAuthorization = false
++    private var backgroundActivity: CLBackgroundActivitySession?
++    private var diagnosticTask: Task<Void, Never>?
++    @Published private(set) var statusDescription = "Background location stopped."
+ 
+     private override init() {
+         super.init()
+         locationManager.delegate = self
+         locationManager.desiredAccuracy = kCLLocationAccuracyThreeKilometers
+-        locationManager.distanceFilter = CLLocationDistanceMax
++        locationManager.distanceFilter = kCLDistanceFilterNone
+         locationManager.allowsBackgroundLocationUpdates = true
+         locationManager.pausesLocationUpdatesAutomatically = false
++        locationManager.showsBackgroundLocationIndicator = true
+     }
+ 
+     func configurationDidChange() {
+@@ -58,12 +63,17 @@
+         isRunning = shouldRun
+         guard shouldRun else {
+             locationManager.stopUpdatingLocation()
++            diagnosticTask?.cancel()
++            diagnosticTask = nil
++            backgroundActivity?.invalidate()
++            backgroundActivity = nil
++            statusDescription = "Background location stopped."
+             return
+         }
+ 
+         switch locationManager.authorizationStatus {
+         case .authorizedAlways:
+-            locationManager.startUpdatingLocation()
++            beginUpdates()
+         case .authorizedWhenInUse:
+             locationManager.requestAlwaysAuthorization()
+         case .notDetermined:
+@@ -80,7 +90,7 @@
+         case .authorizedAlways, .authorizedWhenInUse:
+             isRequestingAuthorization = false
+             if isRunning {
+-                manager.startUpdatingLocation()
++                beginUpdates()
+             }
+         case .denied, .restricted:
+             if isRunning || isRequestingAuthorization {
+@@ -95,6 +105,36 @@
+                 restoreAudioFallback()
+             }
+         }
++    }
++
++    private func beginUpdates() {
++        if backgroundActivity == nil {
++            let activity = CLBackgroundActivitySession()
++            backgroundActivity = activity
++            statusDescription = "Background location session requested."
++            if #available(iOS 18, *) {
++                diagnosticTask = Task { @MainActor [weak self] in
++                    do {
++                        for try await diagnostic in activity.diagnostics {
++                            guard let self, !Task.isCancelled, self.backgroundActivity === activity else { return }
++                            if diagnostic.authorizationDenied || diagnostic.authorizationDeniedGlobally || diagnostic.authorizationRestricted {
++                                self.statusDescription = "Background location is blocked by system authorization."
++                            } else if diagnostic.insufficientlyInUse || diagnostic.serviceSessionRequired {
++                                self.statusDescription = "Background location session is not active. Keep StikDebug open to start it."
++                            } else if diagnostic.authorizationRequestInProgress {
++                                self.statusDescription = "Waiting for location permission."
++                            } else {
++                                self.statusDescription = "Background location session ready."
++                            }
++                        }
++                    } catch {
++                        guard let self, self.backgroundActivity === activity else { return }
++                        self.statusDescription = "Background location status is unavailable."
++                    }
++                }
++            }
++        }
++        locationManager.startUpdatingLocation()
+     }
+ 
+     private func restoreAudioFallback() {

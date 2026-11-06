@@ -1,0 +1,11 @@
+diff --git a/StikDebug/App/AppFeature.swift b/StikDebug/App/AppFeature.swift
+--- a/StikDebug/App/AppFeature.swift
++++ b/StikDebug/App/AppFeature.swift
+@@ -133,6 +133,6 @@
+ }
+ 
+ extension AppFeature {
+-    static let mainTabs: [AppFeature] = [.home, .tools, .settings]
++    static let mainTabs: [AppFeature] = [.location, .tools, .settings]
+     static let toolList: [AppFeature] = [.launchApps, .scripts, .console, .deviceInfo, .profiles, .processes, .location]
+ }

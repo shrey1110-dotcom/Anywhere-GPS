@@ -1,0 +1,85 @@
+diff --git a/StikDebug/Device/IdeviceFFIBridge.swift b/StikDebug/Device/IdeviceFFIBridge.swift
+--- a/StikDebug/Device/IdeviceFFIBridge.swift
++++ b/StikDebug/Device/IdeviceFFIBridge.swift
+@@ -790,6 +790,18 @@
+     static let locationClear: Int32 = 12
+ }
+ 
++func locationSimulationErrorMessage(_ code: Int32) -> String {
++    switch code {
++    case 1: return "The target device address is invalid."
++    case 2: return "The native device library could not read the pairing credential. Check its RemotePairing format and reimport it locally."
++    case 3: return "The device tunnel could not open. Check LocalDevVPN, Local Network access, and the pairing credential."
++    case 9, 10: return "The developer location service could not open. Check Developer Mode and the mounted developer image."
++    case 11: return "The location command failed. Restore or explicitly start a new session."
++    case 12: return "The restore command failed. Reconnect LocalDevVPN and retry, then check Apple Maps."
++    default: return "The location command failed (code \(code))."
++    }
++}
++
+ private enum LocationSimulationState {
+     static var adapter: OpaquePointer?
+     static var handshake: OpaquePointer?
+@@ -820,16 +832,8 @@
+     static let shared = DispatchQueue(label: "com.stik.location-sim", qos: .userInitiated)
+ }
+ 
+-func simulate_location(_ deviceIP: String, _ latitude: Double, _ longitude: Double, _ pairingFile: String) -> Int32 {
+-    if let locationSimulation = LocationSimulationState.locationSimulation {
+-        if let ffiError = location_simulation_set(locationSimulation, latitude, longitude) {
+-            idevice_error_free(ffiError)
+-            LocationSimulationState.cleanup()
+-        } else {
+-            return LocationSimulationStatus.ok
+-        }
+-    }
+-
++private func connect_location_simulation(_ deviceIP: String, _ pairingFile: String) -> Int32 {
++    if LocationSimulationState.locationSimulation != nil { return LocationSimulationStatus.ok }
+     var address = sockaddr_in()
+     address.sin_family = sa_family_t(AF_INET)
+     address.sin_port = in_port_t(RemotePairingPortResolver.resolve(targetIPAddress: deviceIP)).bigEndian
+@@ -896,21 +900,32 @@
+ 
+     LocationSimulationState.remoteServer = nil
+ 
+-    let locationSetError = location_simulation_set(
+-        LocationSimulationState.locationSimulation,
+-        latitude,
+-        longitude
+-    )
+-    if let locationSetError {
+-        idevice_error_free(locationSetError)
++    return LocationSimulationStatus.ok
++}
++
++func simulate_location(_ deviceIP: String, _ latitude: Double, _ longitude: Double, _ pairingFile: String) -> Int32 {
++    let wasConnected = LocationSimulationState.locationSimulation != nil
++    let code = connect_location_simulation(deviceIP, pairingFile)
++    guard code == 0 else { return code }
++    if let error = location_simulation_set(LocationSimulationState.locationSimulation, latitude, longitude) {
++        idevice_error_free(error)
+         LocationSimulationState.cleanup()
++        // Do not silently reconnect and reapply a stale location after losing a session.
+         return LocationSimulationStatus.locationSet
+     }
+-
+-    let conditions = deviceIP == DeviceConnectionContext.defaultTargetIPAddress ? ConnectionDiagnostics.networkConditions() : nil
+-    let notice = ConnectionDiagnostics.connectedNotice(targetIP: deviceIP, conditions: conditions)
+-    NotificationCenter.default.post(name: .locationTunnelConnected, object: notice)
++    if !wasConnected {
++        let conditions = deviceIP == DeviceConnectionContext.defaultTargetIPAddress ? ConnectionDiagnostics.networkConditions() : nil
++        let notice = ConnectionDiagnostics.connectedNotice(targetIP: deviceIP, conditions: conditions)
++        NotificationCenter.default.post(name: .locationTunnelConnected, object: notice)
++    }
+     return LocationSimulationStatus.ok
++}
++
++func restore_real_location(_ deviceIP: String, _ pairingFile: String) -> Int32 {
++    // Recreate only the developer connection after an app restart; never set a location to restore it.
++    let code = connect_location_simulation(deviceIP, pairingFile)
++    guard code == 0 else { return code }
++    return clear_simulated_location()
+ }
+ 
+ func clear_simulated_location() -> Int32 {

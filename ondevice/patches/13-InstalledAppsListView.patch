@@ -1,0 +1,12 @@
+diff --git a/StikDebug/Views/InstalledAppsListView.swift b/StikDebug/Views/InstalledAppsListView.swift
+--- a/StikDebug/Views/InstalledAppsListView.swift
++++ b/StikDebug/Views/InstalledAppsListView.swift
+@@ -17,7 +17,7 @@
+     let showDoneButton: Bool
+     let mode: AppListMode
+ 
+-    private let sharedDefaults = UserDefaults(suiteName: ScriptStore.favoriteAppNamesSuiteName) ?? .standard
++    private let sharedDefaults = UserDefaults.standard
+ 
+     @ObservedObject private var tunnel = TunnelManager.shared
+     @StateObject private var viewModel = InstalledAppsViewModel()

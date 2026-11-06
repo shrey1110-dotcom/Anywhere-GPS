@@ -1,0 +1,103 @@
+{
+  "upstream": "https://github.com/StikDebug/StikDebug.git",
+  "base_commit": "395c4d5a0b5960536c22564f948049122383f3fb",
+  "version": "3.2.1",
+  "signing_team": "omitted; select your own Personal Team locally",
+  "patches": [
+    {
+      "patch": "01--gitignore.patch",
+      "source_path": ".gitignore",
+      "sha256": "ce81a922c5add863a63d48a1da43ef90fd5c05969bb2e941f7c0ffd22294d04c"
+    },
+    {
+      "patch": "02-project.patch",
+      "source_path": "StikDebug.xcodeproj/project.xcproj",
+      "sha256": "7b91b1b6e7ce9eb83185ee58f367dd67b3db2fc6895b9a299ebded14cc2c4bc2"
+    },
+    {
+      "patch": "03-AppBootstrapper.patch",
+      "source_path": "StikDebug/App/AppBootstrapper.swift",
+      "sha256": "6a00d588f8ead10feca6cd277a340ccfcbf4d8ce165b9af3763a4c19513e7db5"
+    },
+    {
+      "patch": "04-AppFeature.patch",
+      "source_path": "StikDebug/App/AppFeature.swift",
+      "sha256": "b10a27e81b8b34f2b2018573c082d09cffd0f0b21d8adb8d6640f14a3b808da5"
+    },
+    {
+      "patch": "05-StikDebugApp.patch",
+      "source_path": "StikDebug/App/StikDebugApp.swift",
+      "sha256": "b5e5173113b81d01cbf89a5b689447e90f2a8523efeb5242453c1c844a1daba3"
+    },
+    {
+      "patch": "06-IdeviceFFIBridge.patch",
+      "source_path": "StikDebug/Device/IdeviceFFIBridge.swift",
+      "sha256": "3f964f42da54f844bbcebdda4b621e6d0c4ca51b068246b9e5c57da484ca624d"
+    },
+    {
+      "patch": "07-JITEnableContext.patch",
+      "source_path": "StikDebug/Device/JITEnableContext.swift",
+      "sha256": "4e3a1b5012bb13cc580baa5492593bbbc4d2bdaeb2cde3f889212405640db6f8"
+    },
+    {
+      "patch": "08-BackgroundLocationManager.patch",
+      "source_path": "StikDebug/Services/BackgroundLocationManager.swift",
+      "sha256": "e86f3186bc5d0faa9122083426b7d96c6cdc974e4e1c4f49bc7239abe0f46eed"
+    },
+    {
+      "patch": "09-LocationSimulationSession.patch",
+      "source_path": "StikDebug/Services/LocationSimulationSession.swift",
+      "sha256": "5b71cc8a788348cf9dca1247b137f43c6352a2fccc630fa132c8bfbfe5a441ba"
+    },
+    {
+      "patch": "10-StikDebug.patch",
+      "source_path": "StikDebug/StikDebug.entitlements",
+      "sha256": "15e9894845940cb17c1e7883f9cfd62433c8e2e1fe238b2b2e9d0e1fc595a319"
+    },
+    {
+      "patch": "11-PairingFileStore.patch",
+      "source_path": "StikDebug/Support/PairingFileStore.swift",
+      "sha256": "f7a6c207390e9436b3c61a67c7f1753510ba1195cc3b029bda2a7d67e734ba1c"
+    },
+    {
+      "patch": "12-ScriptStore.patch",
+      "source_path": "StikDebug/Support/ScriptStore.swift",
+      "sha256": "a43c3eb60356b05ea0b7f327beeea0602716d465b85c69ca00411f7f2162d80b"
+    },
+    {
+      "patch": "13-InstalledAppsListView.patch",
+      "source_path": "StikDebug/Views/InstalledAppsListView.swift",
+      "sha256": "58e9a3d5297103b1182e218c10b4845f7005961e867faabd6ff4693457453b42"
+    },
+    {
+      "patch": "14-MainTabView.patch",
+      "source_path": "StikDebug/Views/MainTabView.swift",
+      "sha256": "c11be6e3a63068ceec3348d639d6bc8137c6bef49ab22bbb39d997f8a324fca0"
+    },
+    {
+      "patch": "15-MapSelectionView.patch",
+      "source_path": "StikDebug/Views/MapSelectionView.swift",
+      "sha256": "8f17aaeaf52158312225f1c3f2483b74c1f4ae9c1a0c7a55a28a85f05d1f697d"
+    },
+    {
+      "patch": "16-SettingsView.patch",
+      "source_path": "StikDebug/Views/SettingsView.swift",
+      "sha256": "9d70ca3d7040e8231ef33b5fb82ea981cff5b7606cbe0f6d7eff6d660ec6b1c4"
+    },
+    {
+      "patch": "17-HeartbeatDiagnostics.patch",
+      "source_path": "StikDebug/Services/HeartbeatDiagnostics.swift",
+      "sha256": "f7b00c66b1ec4a8ca32e764363bb96186a0bd279589a5add8a418a3464e4c580"
+    },
+    {
+      "patch": "18-PairingFormatDiagnostics.patch",
+      "source_path": "StikDebug/Services/PairingFormatDiagnostics.swift",
+      "sha256": "5aec7ac442cc6df8d29639be4e5441e9022ee49744e3ddca5f21b6bf96fb10a5"
+    },
+    {
+      "patch": "19-SigningExpiry.patch",
+      "source_path": "StikDebug/Services/SigningExpiry.swift",
+      "sha256": "004d5a9ca14f9da0a06ed44728a5fc7ab4e6080444f71d67dabfbe00664e58e8"
+    }
+  ]
+}

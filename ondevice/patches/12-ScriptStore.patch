@@ -1,0 +1,12 @@
+diff --git a/StikDebug/Support/ScriptStore.swift b/StikDebug/Support/ScriptStore.swift
+--- a/StikDebug/Support/ScriptStore.swift
++++ b/StikDebug/Support/ScriptStore.swift
+@@ -84,7 +84,7 @@
+ 
+     static func favoriteAppName(
+         for bundleID: String,
+-        defaults: UserDefaults? = UserDefaults(suiteName: favoriteAppNamesSuiteName)
++        defaults: UserDefaults? = .standard
+     ) -> String? {
+         let names = defaults?.dictionary(forKey: favoriteAppNamesKey) as? [String: String]
+         return names?[bundleID]

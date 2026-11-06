@@ -1,0 +1,138 @@
+diff --git a/StikDebug/Services/LocationSimulationSession.swift b/StikDebug/Services/LocationSimulationSession.swift
+--- a/StikDebug/Services/LocationSimulationSession.swift
++++ b/StikDebug/Services/LocationSimulationSession.swift
+@@ -2,19 +2,37 @@
+ import CoreLocation
+ import Combine
+ 
++private final class LocationCommandToken {
++    private let lock = NSLock()
++    private var valid = true
++    var isValid: Bool { lock.lock(); defer { lock.unlock() }; return valid }
++    func cancel() { lock.lock(); valid = false; lock.unlock() }
++}
++
+ final class LocationSimulationSession: ObservableObject {
+     static let shared = LocationSimulationSession()
+-
++    private static let restoreKey = "locationNeedsRestore"
+     @Published private(set) var isActive = false
+     @Published private(set) var coordinate: CLLocationCoordinate2D?
+     @Published private(set) var routeCoordinates: [CLLocationCoordinate2D]?
++    @Published private(set) var lastSuccessfulCommand: Date?
++    @Published private(set) var connectionMessage: String?
++    @Published private(set) var needsRestore = UserDefaults.standard.bool(forKey: restoreKey)
+     private var resendTimer: Timer?
+     private var routeID: UUID?
++    private var commandToken = LocationCommandToken()
++    private var updateInFlight = false
+ 
+-    private init() {}
++    private init() {
++        if needsRestore { connectionMessage = "Previous session ended. GPS state is unknown; check Maps or restore." }
++    }
+ 
+     func start(at coordinate: CLLocationCoordinate2D) {
+         self.coordinate = coordinate
++        lastSuccessfulCommand = Date()
++        connectionMessage = nil
++        needsRestore = true
++        UserDefaults.standard.set(true, forKey: Self.restoreKey)
+         if !isActive {
+             isActive = true
+             BackgroundAudioManager.shared.requestStart()
+@@ -22,46 +40,76 @@
+         }
+     }
+ 
+-    func startResending(at coordinate: CLLocationCoordinate2D, _ operation: @escaping () -> Void) {
++    func startResending(at coordinate: CLLocationCoordinate2D, _ operation: @escaping () -> Int32) {
++        pauseResending()
+         start(at: coordinate)
+-        resendTimer?.invalidate()
+-        let timer = Timer(timeInterval: 4, repeats: true) { _ in operation() }
++        let token = commandToken
++        let timer = Timer(timeInterval: 4, repeats: true) { [weak self] _ in
++            guard let self, token.isValid, !self.updateInFlight else { return }
++            guard let last = self.lastSuccessfulCommand, Date().timeIntervalSince(last) < 20 else {
++                self.markLost("Updates were interrupted. GPS state is unknown; restore or start a new session.")
++                return
++            }
++            self.updateInFlight = true
++            LocationSimulationCommandQueue.shared.async {
++                guard token.isValid else { return }
++                let code = operation()
++                DispatchQueue.main.async {
++                    guard token.isValid else { return }
++                    self.updateInFlight = false
++                    if code == 0 { self.lastSuccessfulCommand = Date() }
++                    else { self.markLost("Location connection lost (code \(code)). Restore or start a new session.") }
++                }
++            }
++        }
+         RunLoop.main.add(timer, forMode: .common)
+         resendTimer = timer
+     }
+ 
+     func startRoute(at coordinate: CLLocationCoordinate2D, coordinates: [CLLocationCoordinate2D]) -> UUID {
+-        let routeID = UUID()
+-        self.routeID = routeID
++        let id = UUID()
++        routeID = id
+         routeCoordinates = coordinates
+         start(at: coordinate)
+-        return routeID
++        return id
+     }
+-
+-    func isCurrentRoute(_ routeID: UUID) -> Bool {
+-        self.routeID == routeID
+-    }
+-
+-    func clearRoute() {
+-        routeID = nil
+-        routeCoordinates = nil
+-    }
++    func isCurrentRoute(_ routeID: UUID) -> Bool { self.routeID == routeID }
++    func clearRoute() { routeID = nil; routeCoordinates = nil }
+ 
+     func pauseResending() {
+         resendTimer?.invalidate()
+         resendTimer = nil
++        commandToken.cancel()
++        commandToken = LocationCommandToken()
++        updateInFlight = false
+     }
+-
+     func updateCoordinate(_ coordinate: CLLocationCoordinate2D) {
+         self.coordinate = coordinate
++        lastSuccessfulCommand = Date()
+     }
+-
++    func checkAfterForeground() {
++        if isActive, let last = lastSuccessfulCommand, Date().timeIntervalSince(last) >= 20 {
++            markLost("Background updates were interrupted. GPS state is unknown; restore or start again.")
++        }
++    }
++    func markLost(_ message: String) {
++        pauseResending()
++        clearRoute()
++        releaseKeepAlive()
++        connectionMessage = message
++    }
+     func stop() {
+         pauseResending()
+         clearRoute()
++        releaseKeepAlive()
++        coordinate = nil
++        needsRestore = false
++        UserDefaults.standard.set(false, forKey: Self.restoreKey)
++        connectionMessage = "Restore command accepted. Check Apple Maps to confirm real GPS."
++    }
++    private func releaseKeepAlive() {
+         guard isActive else { return }
+         isActive = false
+-        coordinate = nil
+         BackgroundAudioManager.shared.requestStop()
+         BackgroundLocationManager.shared.requestStop()
+     }

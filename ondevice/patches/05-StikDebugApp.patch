@@ -1,0 +1,11 @@
+diff --git a/StikDebug/App/StikDebugApp.swift b/StikDebug/App/StikDebugApp.swift
+--- a/StikDebug/App/StikDebugApp.swift
++++ b/StikDebug/App/StikDebugApp.swift
+@@ -33,6 +33,7 @@
+         case .background:
+             shouldAttemptTunnelReconnect = true
+         case .active:
++            LocationSimulationSession.shared.checkAfterForeground()
+             if shouldAttemptTunnelReconnect {
+                 shouldAttemptTunnelReconnect = false
+                 startTunnelInBackground(showErrorUI: false)

@@ -1,0 +1,110 @@
+diff --git a/StikDebug/Device/JITEnableContext.swift b/StikDebug/Device/JITEnableContext.swift
+--- a/StikDebug/Device/JITEnableContext.swift
++++ b/StikDebug/Device/JITEnableContext.swift
+@@ -554,6 +554,7 @@
+         private let logger: LogFunc?
+         private let makeClient: () throws -> (client: OpaquePointer, tunnel: TunnelHandles)
+         private let errorBuilder: (UnsafeMutablePointer<IdeviceFfiError>?, String) -> NSError
++        private let stopOnConnectionFailure: Bool
+         private var startupError: NSError?
+         private var client: OpaquePointer?
+         private var tunnel: TunnelHandles?
+@@ -562,11 +563,13 @@
+         init(
+             logger: LogFunc?,
+             makeClient: @escaping () throws -> (client: OpaquePointer, tunnel: TunnelHandles),
+-            errorBuilder: @escaping (UnsafeMutablePointer<IdeviceFfiError>?, String) -> NSError
++            errorBuilder: @escaping (UnsafeMutablePointer<IdeviceFfiError>?, String) -> NSError,
++            stopOnConnectionFailure: Bool = false
+         ) {
+             self.logger = logger
+             self.makeClient = makeClient
+             self.errorBuilder = errorBuilder
++            self.stopOnConnectionFailure = stopOnConnectionFailure
+         }
+ 
+         func start() throws {
+@@ -575,7 +578,13 @@
+                 self?.run()
+             }
+ 
+-            startupSemaphore.wait()
++            guard startupSemaphore.wait(timeout: .now() + .seconds(15)) == .success else {
++                stateLock.lock()
++                stopRequested = true
++                stateLock.unlock()
++                throw NSError(domain: "StikDebug", code: -19,
++                              userInfo: [NSLocalizedDescriptionKey: "Developer heartbeat setup timed out"])
++            }
+             if let startupError {
+                 throw startupError
+             }
+@@ -623,6 +632,11 @@
+                 stoppedSemaphore.signal()
+             }
+ 
++            guard !shouldStop() else {
++                startupSemaphore.signal()
++                return
++            }
++            log("Developer heartbeat connected")
+             startupSemaphore.signal()
+ 
+             var interval = Self.defaultInterval
+@@ -650,6 +664,7 @@
+                     }
+ 
+                     log("Debug heartbeat warning: \(description)")
++                    if stopOnConnectionFailure { break }
+                     interval = Self.defaultInterval
+                     continue
+                 }
+@@ -659,6 +674,7 @@
+                 if let ffiError = heartbeat_send_polo(client) {
+                     let heartbeatError = errorBuilder(ffiError, "Failed to reply to heartbeat")
+                     log("Debug heartbeat warning: \(heartbeatError.localizedDescription)")
++                    if stopOnConnectionFailure { break }
+                     interval = Self.defaultInterval
+                 }
+             }
+@@ -731,7 +747,29 @@
+         return try body(processControl)
+     }
+ 
+-    private func connectHeartbeatKeepAlive(logger: LogFunc?) throws -> DebugHeartbeatKeepAlive {
++    func startHeartbeatProbe() throws -> () -> Void {
++        let heartbeat = try connectHeartbeatKeepAlive(logger: { message in
++            // Keep raw protocol error text out of UI and diagnostic exports.
++            guard let message else { return }
++            if message == "Developer heartbeat connected" {
++                HeartbeatDiagnostics.record(stage: "connected", reason: "connected")
++            } else if message.contains("SleepyTime") || message.contains("warning") {
++                let reason = HeartbeatDiagnostics.category(message)
++                HeartbeatDiagnostics.record(stage: "receive", reason: reason)
++            }
++        }, stopOnConnectionFailure: true)
++        do {
++            try heartbeat.start()
++        } catch {
++            let error = error as NSError
++            let reason = HeartbeatDiagnostics.category(error.localizedDescription)
++            HeartbeatDiagnostics.record(stage: "startup", reason: reason, code: error.code)
++            throw error
++        }
++        return { heartbeat.stop() }
++    }
++
++    private func connectHeartbeatKeepAlive(logger: LogFunc?, stopOnConnectionFailure: Bool = false) throws -> DebugHeartbeatKeepAlive {
+         return DebugHeartbeatKeepAlive(
+             logger: logger,
+             makeClient: { [weak self] in
+@@ -768,7 +806,8 @@
+                     code: -1,
+                     userInfo: [NSLocalizedDescriptionKey: fallback]
+                 )
+-            }
++            },
++            stopOnConnectionFailure: stopOnConnectionFailure
+         )
+     }
+ 

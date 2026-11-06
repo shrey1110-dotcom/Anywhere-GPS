@@ -1,0 +1,14 @@
+diff --git a/StikDebug/App/AppBootstrapper.swift b/StikDebug/App/AppBootstrapper.swift
+--- a/StikDebug/App/AppBootstrapper.swift
++++ b/StikDebug/App/AppBootstrapper.swift
+@@ -13,6 +13,10 @@
+         registerDefaultSettings()
+         ensureKeepAliveSelection()
+         applyDocumentPickerCopyWorkaround()
++        #if DEBUG
++        PairingFormatDiagnostics.runIfRequested()
++        HeartbeatDiagnostics.probeIfRequested()
++        #endif
+     }
+ 
+     private static func registerDefaultSettings() {

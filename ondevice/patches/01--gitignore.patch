@@ -1,0 +1,14 @@
+diff --git a/.gitignore b/.gitignore
+--- a/.gitignore
++++ b/.gitignore
+@@ -95,3 +95,10 @@
+ .DS_Store
+ .vscode/settings.json
+ .vscode 
++
++# Device credentials must remain outside source control.
++*.mobiledevicepairing
++*.mobiledevicepair
++pairingFile.plist
++rp_pairing_file.plist
++*.pairing-secret

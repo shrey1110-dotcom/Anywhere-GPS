@@ -1,0 +1,47 @@
+diff --git a/StikDebug/Services/HeartbeatDiagnostics.swift b/StikDebug/Services/HeartbeatDiagnostics.swift
+new file mode 100644
+--- /dev/null
++++ b/StikDebug/Services/HeartbeatDiagnostics.swift
+@@ -0,0 +1,42 @@
++import Foundation
++
++enum HeartbeatDiagnostics {
++    static func category(_ message: String) -> String {
++        let text = message.lowercased()
++        if text.contains("sleepytime") { return "device requested sleep" }
++        if ["servicenotfound", "invalidservice", "unknownservice"].contains(where: text.contains) { return "service unavailable" }
++        if ["notentitled", "permission", "accessdenied"].contains(where: text.contains) { return "service access denied" }
++        if ["pairverify", "invalidhost"].contains(where: text.contains) { return "pairing rejected" }
++        if ["timeout", "timed out"].contains(where: text.contains) { return "connection timed out" }
++        if ["connectionreset", "notconnected", "brokenpipe", "channel closed"].contains(where: text.contains) { return "connection closed" }
++        if text.contains("tls") { return "transport handshake failed" }
++        return "unclassified native failure"
++    }
++
++    static func record(stage: String, reason: String, code: Int? = nil) {
++        #if DEBUG
++        var report: [String: Any] = ["stage": stage, "reason": reason,
++                                    "recordedAt": ISO8601DateFormatter().string(from: Date())]
++        if let code { report["errorCode"] = code }
++        do {
++            var url = URL.documentsDirectory.appendingPathComponent("heartbeat_diagnostics.json")
++            try JSONSerialization.data(withJSONObject: report, options: [.sortedKeys])
++                .write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
++            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
++            var resources = URLResourceValues()
++            resources.isExcludedFromBackup = true
++            try url.setResourceValues(resources)
++        } catch { /* Diagnostic failure must not change the location session. */ }
++        #endif
++    }
++
++    static func probeIfRequested() {
++        guard ProcessInfo.processInfo.environment["STIKDEBUG_HEARTBEAT_DIAGNOSTICS"] == "1" else { return }
++        DispatchQueue.global(qos: .utility).async {
++            do {
++                let stop = try JITEnableContext.shared.startHeartbeatProbe()
++                DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 3) { stop() }
++            } catch { /* The heartbeat method records only a sanitized category and code. */ }
++        }
++    }
++}

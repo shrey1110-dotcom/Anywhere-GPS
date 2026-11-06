@@ -1,0 +1,93 @@
+diff --git a/StikDebug/Views/MainTabView.swift b/StikDebug/Views/MainTabView.swift
+--- a/StikDebug/Views/MainTabView.swift
++++ b/StikDebug/Views/MainTabView.swift
+@@ -51,7 +51,7 @@
+ }
+ 
+ struct MainTabView: View {
+-    @AppStorage("primaryTabSelection") private var selection: String = AppFeature.home.id
++    @AppStorage("primaryTabSelection") private var selection: String = AppFeature.location.id
+     @State private var detachedFeature: AppFeature?
+     @State private var didSetInitialHome = false
+     @State private var pendingLocationAction: ExternalLocationAction?
+@@ -62,7 +62,13 @@
+ 
+             TabView(selection: $selection) {
+                 ForEach(AppFeature.mainTabs) { feature in
+-                    feature.destination
++                    Group {
++                        if feature == .location {
++                            NavigationStack { feature.destination }
++                        } else {
++                            feature.destination
++                        }
++                    }
+                         .tabItem { Label(feature.title, systemImage: feature.systemImage) }
+                         .tag(feature.id)
+                 }
+@@ -70,7 +76,7 @@
+             .onAppear {
+                 ensureSelectionIsValid()
+                 if !didSetInitialHome {
+-                    selection = AppFeature.home.id
++                    selection = AppFeature.location.id
+                     didSetInitialHome = true
+                 }
+             }
+@@ -120,7 +126,7 @@
+         if ids.contains(selection) {
+             return
+         }
+-        selection = AppFeature.home.id
++        selection = AppFeature.location.id
+     }
+ 
+     private func handleURL(_ url: URL) {
+@@ -231,14 +237,12 @@
+                             longitude: coordinate.longitude
+                         )
+                     ) {
+-                        LocationSimulationCommandQueue.shared.async {
+-                            _ = simulate_location(
+-                                DeviceConnectionContext.targetIPAddress,
+-                                coordinate.latitude,
+-                                coordinate.longitude,
+-                                pairingFile.path
+-                            )
+-                        }
++                        simulate_location(
++                            DeviceConnectionContext.targetIPAddress,
++                            coordinate.latitude,
++                            coordinate.longitude,
++                            pairingFile.path
++                        )
+                     }
+                     LogManager.shared.addInfoLog(
+                         String(format: "Simulated location from URL: %.6f, %.6f", coordinate.latitude, coordinate.longitude)
+@@ -246,7 +250,7 @@
+                 } else {
+                     showAlert(
+                         title: "Location Simulation Failed".localized,
+-                        message: "Could not simulate location from URL (error \(code)). Make sure the device is connected and the DDI is mounted.",
++                        message: locationSimulationErrorMessage(code),
+                         showOk: true
+                     )
+                 }
+@@ -255,13 +259,16 @@
+     }
+ 
+     private func clearSimulatedLocation() {
++        LocationSimulationSession.shared.pauseResending()
++        LocationSimulationSession.shared.clearRoute()
+         LocationSimulationCommandQueue.shared.async {
+-            let code = clear_simulated_location()
++            let code = restore_real_location(DeviceConnectionContext.targetIPAddress, PairingFileStore.prepareURL().path)
+             DispatchQueue.main.async {
+                 if code == 0 {
+                     LocationSimulationSession.shared.stop()
+                     LogManager.shared.addInfoLog("Cleared simulated location from URL")
+                 } else {
++                    LocationSimulationSession.shared.markLost("Restore failed. GPS state is unknown; reconnect the VPN and retry.")
+                     showAlert(
+                         title: "Clear Location Failed".localized,
+                         message: "Could not clear simulated location from URL (error \(code)).",

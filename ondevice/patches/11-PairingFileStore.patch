@@ -1,0 +1,207 @@
+diff --git a/StikDebug/Support/PairingFileStore.swift b/StikDebug/Support/PairingFileStore.swift
+--- a/StikDebug/Support/PairingFileStore.swift
++++ b/StikDebug/Support/PairingFileStore.swift
+@@ -1,10 +1,6 @@
+-//
+-//  PairingFileStore.swift
+-//  StikDebug
+-//
+-
+ import Foundation
+ import UniformTypeIdentifiers
++import Darwin
+ 
+ enum PairingFileStore {
+     static let fileName = "pairingFile.plist"
+@@ -13,129 +9,93 @@
+         UTType(filenameExtension: "mobiledevicepair", conformingTo: .data)!,
+         .propertyList
+     ]
+-
+-    private static let legacyFileName = "rp_pairing_file.plist"
+-
+-    static var url: URL {
+-        directoryURL.appendingPathComponent(fileName)
+-    }
++    static var url: URL { directoryURL.appendingPathComponent(fileName) }
+ 
+     @discardableResult
+     static func prepareURL(fileManager: FileManager = .default) -> URL {
+-        let destination = url
+-        try? fileManager.createDirectory(at: directoryURL, withIntermediateDirectories: true)
+-
+-        if let documentURL = documentSourceURL(fileManager: fileManager) {
+-            if !fileManager.fileExists(atPath: destination.path) ||
+-                !fileManager.contentsEqual(atPath: documentURL.path, andPath: destination.path) {
+-                do {
+-                    try replaceItem(at: destination, with: documentURL, fileManager: fileManager)
+-                } catch {
+-                    return destination
+-                }
++        do {
++            try prepareDirectory(fileManager: fileManager)
++            if let source = importURLs.first(where: { fileManager.fileExists(atPath: $0.path) }) {
++                try replace(with: source, fileManager: fileManager)
++            } else if fileManager.fileExists(atPath: url.path) {
++                try protect(url, fileManager: fileManager)
+             }
+-            protectPairingFile(at: destination, fileManager: fileManager)
+-            removeLegacyCopies(fileManager: fileManager)
+-            return destination
++            return url
++        } catch {
++            // Fail closed: do not consume a credential whose protection could not be enforced.
++            LogManager.shared.addErrorLog("Pairing storage could not be secured. Reimport the pairing file.")
++            return directoryURL.appendingPathComponent("unavailable")
+         }
+-
+-        if !fileManager.fileExists(atPath: destination.path) {
+-            migrateLegacyCopy(fileManager: fileManager)
+-        } else {
+-            removeLegacyCopies(fileManager: fileManager)
+-        }
+-        return destination
+     }
+ 
+     static func replace(with sourceURL: URL, fileManager: FileManager = .default) throws {
+-        try fileManager.createDirectory(at: directoryURL, withIntermediateDirectories: true)
+-
+-        let documentsDestination = documentsURL
+-        if sourceURL.standardizedFileURL != documentsDestination.standardizedFileURL {
+-            try replaceItem(at: documentsDestination, with: sourceURL, fileManager: fileManager)
++        try prepareDirectory(fileManager: fileManager)
++        let data = try Data(contentsOf: sourceURL)
++        guard let record = try PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
++              let publicKey = record["public_key"] as? Data, publicKey.count == 32,
++              let privateKey = record["private_key"] as? Data, privateKey.count == 32 else {
++            throw CocoaError(.fileReadCorruptFile)
+         }
+-
+-        try replaceItem(at: url, with: documentsDestination, fileManager: fileManager)
+-        protectPairingFile(at: url, fileManager: fileManager)
+-        removeLegacyCopies(fileManager: fileManager)
++        let temporary = directoryURL.appendingPathComponent(UUID().uuidString + ".tmp")
++        let fd = Darwin.open(temporary.path, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0o600)
++        guard fd >= 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
++        let handle = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
++        defer {
++            try? handle.close()
++            try? fileManager.removeItem(at: temporary)
++        }
++        try protect(temporary, fileManager: fileManager)
++        try handle.write(contentsOf: data)
++        try handle.synchronize()
++        guard Darwin.rename(temporary.path, url.path) == 0 else {
++            throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
++        }
++        try protect(url, fileManager: fileManager)
++        for copy in importURLs where fileManager.fileExists(atPath: copy.path) {
++            try fileManager.removeItem(at: copy)
++        }
+     }
+ 
+     static func importFromPicker(_ sourceURL: URL, fileManager: FileManager = .default) throws {
+         let accessing = sourceURL.startAccessingSecurityScopedResource()
+-        defer {
+-            if accessing {
+-                sourceURL.stopAccessingSecurityScopedResource()
+-            }
+-        }
+-
+-        guard fileManager.fileExists(atPath: sourceURL.path) else {
+-            throw CocoaError(.fileNoSuchFile)
+-        }
+-
++        defer { if accessing { sourceURL.stopAccessingSecurityScopedResource() } }
+         try replace(with: sourceURL, fileManager: fileManager)
+     }
+ 
+     static func remove(fileManager: FileManager = .default) throws {
+-        let destination = prepareURL(fileManager: fileManager)
+-        if fileManager.fileExists(atPath: destination.path) {
+-            try fileManager.removeItem(at: destination)
++        for copy in [url] + importURLs where fileManager.fileExists(atPath: copy.path) {
++            try fileManager.removeItem(at: copy)
+         }
+-        if fileManager.fileExists(atPath: documentsURL.path) {
+-            try fileManager.removeItem(at: documentsURL)
+-        }
+-        removeLegacyCopies(fileManager: fileManager)
+     }
+ 
+     private static var directoryURL: URL {
+-        FileManager.default
+-            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
++        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+             .appendingPathComponent("Pairing", isDirectory: true)
+     }
+-
+-    private static var legacyURLs: [URL] {
+-        [
+-            URL.documentsDirectory.appendingPathComponent(legacyFileName),
+-            directoryURL.appendingPathComponent(legacyFileName)
+-        ]
++    private static var importURLs: [URL] {
++        [URL.documentsDirectory.appendingPathComponent(fileName),
++         URL.documentsDirectory.appendingPathComponent("rp_pairing_file.plist"),
++         directoryURL.appendingPathComponent("rp_pairing_file.plist")]
+     }
+-
+-    private static var documentsURL: URL {
+-        URL.documentsDirectory.appendingPathComponent(fileName)
++    private static func prepareDirectory(fileManager: FileManager) throws {
++        try fileManager.createDirectory(at: directoryURL, withIntermediateDirectories: true,
++                                        attributes: [.posixPermissions: 0o700,
++                                                     .protectionKey: FileProtectionType.completeUntilFirstUserAuthentication])
++        try fileManager.setAttributes([.posixPermissions: 0o700,
++                                       .protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
++                                      ofItemAtPath: directoryURL.path)
++        try excludeFromBackup(directoryURL)
+     }
+-
+-    private static func documentSourceURL(fileManager: FileManager) -> URL? {
+-        fileManager.fileExists(atPath: documentsURL.path) ? documentsURL : nil
++    private static func protect(_ url: URL, fileManager: FileManager) throws {
++        try fileManager.setAttributes([.posixPermissions: 0o600,
++                                       .protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
++                                      ofItemAtPath: url.path)
++        try excludeFromBackup(url)
+     }
+-
+-    private static func migrateLegacyCopy(fileManager: FileManager) {
+-        for legacyURL in legacyURLs where fileManager.fileExists(atPath: legacyURL.path) {
+-            try? replace(with: legacyURL, fileManager: fileManager)
+-            break
+-        }
+-    }
+-
+-    private static func replaceItem(at destination: URL, with source: URL, fileManager: FileManager) throws {
+-        let temporary = destination
+-            .deletingLastPathComponent()
+-            .appendingPathComponent(UUID().uuidString + ".tmp")
+-        try? fileManager.removeItem(at: temporary)
+-        defer { try? fileManager.removeItem(at: temporary) }
+-        try fileManager.copyItem(at: source, to: temporary)
+-
+-        if fileManager.fileExists(atPath: destination.path) {
+-            _ = try fileManager.replaceItemAt(destination, withItemAt: temporary)
+-        } else {
+-            try fileManager.moveItem(at: temporary, to: destination)
+-        }
+-    }
+-
+-    private static func removeLegacyCopies(fileManager: FileManager) {
+-        for legacyURL in legacyURLs where fileManager.fileExists(atPath: legacyURL.path) {
+-            try? fileManager.removeItem(at: legacyURL)
+-        }
+-    }
+-
+-    private static func protectPairingFile(at url: URL, fileManager: FileManager) {
+-        try? fileManager.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
++    private static func excludeFromBackup(_ url: URL) throws {
++        var destination = url
++        var values = URLResourceValues()
++        values.isExcludedFromBackup = true
++        try destination.setResourceValues(values)
+     }
+ }

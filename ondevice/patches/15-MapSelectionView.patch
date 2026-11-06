@@ -1,0 +1,162 @@
+diff --git a/StikDebug/Views/MapSelectionView.swift b/StikDebug/Views/MapSelectionView.swift
+--- a/StikDebug/Views/MapSelectionView.swift
++++ b/StikDebug/Views/MapSelectionView.swift
+@@ -724,14 +724,10 @@
+ }
+ 
+ struct LocationSimulationView: View {
+-    @ObservedObject private var tunnel = TunnelManager.shared
+-    @State private var showConnectedStatus = true
+     @State private var locationConnectionNotice: String?
+     @State private var connectionErrorMessage: String?
+-    private var isDeviceConnected: Bool {
+-        tunnel.isConnected && !tunnel.isStarting && tunnel.lastError == nil && connectionErrorMessage == nil
+-    }
+     @ObservedObject private var simulationSession = LocationSimulationSession.shared
++    @ObservedObject private var backgroundLocation = BackgroundLocationManager.shared
+     @State private var coordinate: CLLocationCoordinate2D?
+     @State private var position: MapCameraPosition = .userLocation(fallback: .automatic)
+ 
+@@ -964,32 +960,50 @@
+             }
+         }
+         .safeAreaInset(edge: .top) {
+-            if locationConnectionNotice != nil || !isDeviceConnected || showConnectedStatus || tunnel.connectionNotice != nil {
+-                Group {
+-                    if let notice = locationConnectionNotice {
+-                        Label(notice, systemImage: "airplane")
+-                            .font(.subheadline)
+-                            .foregroundStyle(.green)
+-                            .frame(maxWidth: .infinity, alignment: .leading)
+-                    } else {
+-                        DeviceConnectionStatusView(errorMessage: connectionErrorMessage)
+-                    }
+-                }
++            VStack(alignment: .leading, spacing: 8) {
++                SigningExpiryView()
++                Label(simulationSession.isActive ? "Location updates active" : "Location updates stopped",
++                      systemImage: simulationSession.isActive ? "location.fill" : "location.slash")
++                    .font(.subheadline)
++                if simulationSession.isActive {
++                    Text(backgroundLocation.statusDescription).font(.caption).foregroundStyle(.secondary)
++                }
++                if let message = simulationSession.connectionMessage {
++                    Text(message)
++                        .font(.footnote)
++                        .foregroundStyle(simulationSession.needsRestore ? Color.orange : Color.secondary)
++                }
++                if let last = simulationSession.lastSuccessfulCommand, simulationSession.isActive {
++                    Text("Last command accepted \(last.formatted(date: .omitted, time: .standard)). Confirm location in Maps.")
++                        .font(.caption).foregroundStyle(.secondary)
++                }
++                Button("Restore Real GPS", role: .destructive, action: clear)
++                    .buttonStyle(.borderedProminent)
++                    .disabled(!pairingExists || isBusy)
++                    .accessibilityHint("Stops updates and asks the device to clear its simulated location.")
++            }
++            .padding(12)
++            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
++            .padding(.horizontal)
++            if let notice = locationConnectionNotice {
++                Label(notice, systemImage: "airplane")
++                    .font(.subheadline)
++                    .foregroundStyle(.green)
++                    .frame(maxWidth: .infinity, alignment: .leading)
+                     .padding(12)
+                     .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+                     .padding(.horizontal)
+             }
+         }
+-        .task(id: isDeviceConnected) {
+-            showConnectedStatus = true
+-            guard isDeviceConnected else { return }
+-            do {
+-                try await Task.sleep(for: .seconds(3))
+-                showConnectedStatus = false
+-            } catch {}
+-        }
+         .onReceive(NotificationCenter.default.publisher(for: .locationTunnelConnected).receive(on: DispatchQueue.main)) { notification in
+             locationConnectionNotice = notification.object as? String
++        }
++        .onChange(of: simulationSession.isActive) { _, active in
++            if !active {
++                cancelRoutePlayback(resetMarker: true)
++                simulatedCoordinate = nil
++                endBackgroundTask()
++            }
+         }
+         .task(id: locationConnectionNotice) {
+             guard locationConnectionNotice != nil else { return }
+@@ -1281,11 +1295,6 @@
+                 .foregroundStyle(.secondary)
+ 
+             HStack(spacing: 12) {
+-                Button("Stop", action: clear)
+-                    .buttonStyle(.bordered)
+-                    .tint(.red)
+-                    .disabled(!pairingExists || isBusy || !hasActiveSimulation)
+-
+                 Button("Simulate Location", action: simulate)
+                     .buttonStyle(.borderedProminent)
+                     .disabled(!pairingExists || isBusy || isLoadingRoute)
+@@ -1324,11 +1333,6 @@
+             routeAttributionLink
+ 
+             HStack(spacing: 12) {
+-                Button("Stop", action: clear)
+-                    .buttonStyle(.bordered)
+-                    .tint(.red)
+-                    .disabled(!pairingExists || isBusy || !hasActiveSimulation)
+-
+                 Button("Play Route", action: simulateRoute)
+                     .buttonStyle(.borderedProminent)
+                     .disabled(
+@@ -1352,7 +1356,7 @@
+         runLocationCommand(
+             errorTitle: "Simulation Failed",
+             errorMessage: { code in
+-                "Could not simulate location (error \(code)). Make sure the device is connected and the DDI is mounted."
++                locationSimulationErrorMessage(code)
+             },
+             operation: { locationUpdateCode(for: coord) }
+         ) {
+@@ -1405,6 +1409,7 @@
+                     connectionErrorMessage = nil
+                     onSuccess()
+                 } else {
++                    LocationSimulationSession.shared.markLost("Command failed (code \(code)). GPS state is unknown; restore or start again.")
+                     alertTitle = errorTitle
+                     alertMessage = errorMessage(code)
+                     connectionErrorMessage = "Code \(code): \(alertMessage)"
+@@ -1427,7 +1432,7 @@
+         runLocationCommand(
+             errorTitle: "Clear Failed",
+             errorMessage: { code in "Could not clear simulated location (error \(code))." },
+-            operation: clear_simulated_location
++            operation: { restore_real_location(deviceIP, pairingFilePath) }
+         ) {
+             endBackgroundTask()
+             LocationSimulationSession.shared.stop()
+@@ -1449,9 +1454,7 @@
+     private func startResendLoop(with coordinate: CLLocationCoordinate2D) {
+         simulatedCoordinate = coordinate
+         LocationSimulationSession.shared.startResending(at: coordinate) {
+-            LocationSimulationCommandQueue.shared.async {
+-                _ = locationUpdateCode(for: coordinate)
+-            }
++            locationUpdateCode(for: coordinate)
+         }
+     }
+ 
+@@ -1603,10 +1606,7 @@
+                     await MainActor.run {
+                         routePlaybackTask = nil
+                         routePlaybackCoordinate = lastSuccessfulCoordinate
+-                        LocationSimulationSession.shared.clearRoute()
+-                        if let lastSuccessfulCoordinate {
+-                            startResendLoop(with: lastSuccessfulCoordinate)
+-                        }
++                        LocationSimulationSession.shared.markLost("Route connection lost. Restore or explicitly start again.")
+                         alertTitle = "Route Simulation Failed"
+                         alertMessage = "Could not continue route simulation (error \(code))."
+                         connectionErrorMessage = "Code \(code): Could not continue route simulation."

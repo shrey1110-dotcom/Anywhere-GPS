@@ -1,0 +1,26 @@
+diff --git a/StikDebug/Views/SettingsView.swift b/StikDebug/Views/SettingsView.swift
+--- a/StikDebug/Views/SettingsView.swift
++++ b/StikDebug/Views/SettingsView.swift
+@@ -13,7 +13,6 @@
+ }
+ 
+ struct SettingsView: View {
+-    @StateObject private var onDevicePairing = OnDevicePairingService.shared
+     @AppStorage(UserDefaults.Keys.txmOverride) private var overrideTXMDetection = false
+     @AppStorage(UserDefaults.Keys.confirmExternalJITRequests) private var confirmExternalJITRequests = true
+     @AppStorage("keepAliveAudio") private var keepAliveAudio = true
+@@ -71,12 +70,8 @@
+                 }
+ 
+                 Section("Pairing File") {
+-                    NavigationLink {
+-                        OnDevicePairingView(service: onDevicePairing)
+-                    } label: {
+-                        Label("Pair a Device", systemImage: "iphone.and.arrow.forward")
+-                    }
+-
++                    Text("Generate your pairing file locally on your Mac. StikDebug does not need your Apple Account email or password.")
++                        .font(.caption).foregroundStyle(.secondary)
+                     Button {
+                         isShowingPairingFilePicker = true
+                     } label: {

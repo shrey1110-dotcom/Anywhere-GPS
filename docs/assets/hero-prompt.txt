@@ -1,0 +1,9 @@
+Generated with the built-in image_gen tool. Conceptual illustration; not an app screenshot.
+
+Use case: ads-marketing
+Asset type: GitHub README hero banner for Anywhere GPS, a developer tool for location simulation on a user's own iPhone.
+Primary request: Create a polished wide editorial illustration combining an elegant simplified smartphone with a beautiful abstract cartographic surface, a location marker, fine contour lines and a restrained glowing route.
+Style/medium: premium product illustration with tactile dark surfaces, crisp map linework, subtle depth, sophisticated lighting and ample breathing room. Wide landscape composition.
+Text (verbatim): "ANYWHERE GPS" and beneath it "Location simulation for your own iPhone".
+Composition: readable large typography in the left half, phone and map artwork in the right half. Dark graphite and warm ivory with a restrained mint-green accent. Strong readability at GitHub README width.
+Constraints: Conceptual illustration, not a real app screenshot. No identifiable real-world private location, no account details, no credentials, no Apple logo, no unsupported feature badges, no watermark. Keep the entire title and subtitle comfortably inside the frame.

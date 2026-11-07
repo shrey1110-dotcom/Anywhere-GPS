@@ -1,0 +1,45 @@
+diff --git a/StikDebug/Services/SigningExpiry.swift b/StikDebug/Services/SigningExpiry.swift
+new file mode 100644
+--- /dev/null
++++ b/StikDebug/Services/SigningExpiry.swift
+@@ -0,0 +1,40 @@
++import Foundation
++import SwiftUI
++
++enum SigningExpiry {
++    static func expirationDate(in data: Data, bundleID: String) -> Date? {
++        guard let plist = try? CMSDecoderHelper.decodeCMSData(data),
++              let record = try? PropertyListSerialization.propertyList(from: plist, format: nil) as? [String: Any],
++              let entitlements = record["Entitlements"] as? [String: Any],
++              let identifier = entitlements["application-identifier"] as? String,
++              identifier.hasSuffix("." + bundleID) else { return nil }
++        return record["ExpirationDate"] as? Date
++    }
++    static var current: Date? {
++        guard let url = Bundle.main.url(forResource: "embedded", withExtension: "mobileprovision"),
++              let data = try? Data(contentsOf: url), let id = Bundle.main.bundleIdentifier else { return nil }
++        return expirationDate(in: data, bundleID: id)
++    }
++}
++
++struct SigningExpiryView: View {
++    var body: some View {
++        TimelineView(.periodic(from: .now, by: 60)) { context in
++            if let expiry = SigningExpiry.current {
++                VStack(alignment: .leading, spacing: 3) {
++                    Text(expiry <= context.date ? "Signing expired" : "Signing expires \(expiry.formatted(date: .abbreviated, time: .shortened))")
++                        .font(.caption.weight(.semibold))
++                    if expiry.timeIntervalSince(context.date) <= 2 * 86_400 {
++                        Text("Connect to your Mac and run this app from Xcode before expiry. Keep the same bundle ID.")
++                            .font(.caption)
++                    }
++                }
++                .foregroundStyle(expiry.timeIntervalSince(context.date) <= 2 * 86_400 ? Color.orange : Color.secondary)
++                .frame(maxWidth: .infinity, alignment: .leading)
++            } else {
++                Text("Signing expiry unavailable. Free Xcode signing normally needs renewal within 7 days.")
++                    .font(.caption).foregroundStyle(.secondary)
++            }
++        }
++    }
++}

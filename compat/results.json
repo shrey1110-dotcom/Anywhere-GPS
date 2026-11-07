@@ -1,0 +1,102 @@
+[
+  {
+    "app": "Apple Maps",
+    "outcome": "location_ui_behavior_observed",
+    "physical_device": "iPhone18,2 / iOS 26.4",
+    "recorded_at": "2026-11-07T07:29:35Z",
+    "method": "StikDebug on-device with LocalDevVPN",
+    "stikdebug_base_commit": "395c4d5a0b5960536c22564f948049122383f3fb",
+    "local_changes": true,
+    "test_location": {
+      "name": "Apple Park",
+      "latitude": 37.3349,
+      "longitude": -122.009
+    },
+    "evidence": "User reported Location accepted, then confirmed Apple Maps current-location blue dot at Apple Park/Cupertino after tapping the current-location arrow.",
+    "limits": "Initial Maps observation only. Subsequent 10m20s USB-disconnected lock test failed; explicit restore and Maps check then passed. No Location Probe reading or other app observation."
+  },
+  {
+    "app": "Apple Maps",
+    "outcome": "location_ui_behavior_observed",
+    "physical_device": "iPhone18,2 / iOS 26.4",
+    "recorded_at": "2026-11-07T07:50:16Z",
+    "method": "StikDebug on-device with LocalDevVPN; USB unplugged and phone locked",
+    "stikdebug_base_commit": "395c4d5a0b5960536c22564f948049122383f3fb",
+    "local_changes": true,
+    "test_location": {
+      "name": "Apple Park",
+      "latitude": 37.3349,
+      "longitude": -122.009
+    },
+    "lock_started_at": "2026-11-07T07:37:15Z",
+    "check_requested_at": "2026-11-07T07:47:35Z",
+    "timed_interval_seconds": 620,
+    "background_persistence": "failed",
+    "evidence": "Initial Apple Maps blue dot at Apple Park was confirmed. After the timed locked interval and instructions to inspect Maps before reopening StikDebug, the user reported the original real location.",
+    "limits": "One failed persistence test. App termination, suspension, VPN loss and developer connection loss have not been distinguished. Explicit Restore Real GPS was subsequently accepted with USB unplugged and Maps confirmed the real location."
+  },
+  {
+    "app": "Apple Maps",
+    "outcome": "location_ui_behavior_observed",
+    "physical_device": "iPhone18,2 / iOS 26.4",
+    "method": "StikDebug Restore Real GPS with USB unplugged",
+    "stikdebug_base_commit": "395c4d5a0b5960536c22564f948049122383f3fb",
+    "local_changes": true,
+    "phase": "restore",
+    "result": "passed",
+    "evidence": "User reported Restore command accepted, then confirmed current-location blue dot at real location in Apple Maps.",
+    "limits": "Maps-based confirmation after automatic reversion during failed lock test. No Location Probe source-information reading."
+  },
+  {
+    "app": "Apple Maps",
+    "outcome": "location_ui_behavior_observed",
+    "physical_device": "iPhone18,2 / iOS 26.4",
+    "recorded_at": "2026-11-07T08:33:06Z",
+    "method": "StikDebug CLBackgroundActivitySession candidate with LocalDevVPN",
+    "stikdebug_base_commit": "395c4d5a0b5960536c22564f948049122383f3fb",
+    "local_changes": true,
+    "phase": "final_candidate_baseline",
+    "result": "passed",
+    "test_location": {
+      "name": "Apple Park",
+      "latitude": 37.3349,
+      "longitude": -122.009
+    },
+    "evidence": "User confirmed both Location updates active and Background location session ready, then Apple Maps current-location blue dot at Apple Park/Cupertino.",
+    "limits": "Maps observation only. The final candidate subsequently passed one 10m28s unplugged locked interval and explicit restore with real-location Maps confirmation. No Location Probe or other-app observation."
+  },
+  {
+    "app": "Apple Maps",
+    "outcome": "location_ui_behavior_observed",
+    "physical_device": "iPhone18,2 / iOS 26.4",
+    "recorded_at": "2026-11-07T08:44:38Z",
+    "method": "StikDebug CLBackgroundActivitySession candidate with LocalDevVPN; USB unplugged and iPhone locked",
+    "stikdebug_base_commit": "395c4d5a0b5960536c22564f948049122383f3fb",
+    "local_changes": true,
+    "phase": "final_candidate_locked_persistence",
+    "background_persistence": "passed",
+    "test_location": {
+      "name": "Apple Park",
+      "latitude": 37.3349,
+      "longitude": -122.009
+    },
+    "lock_started_at": "2026-11-07T08:33:24Z",
+    "check_requested_at": "2026-11-07T08:43:52Z",
+    "timed_interval_seconds": 628,
+    "evidence": "Both location-session readiness messages and initial Maps Apple Park blue dot confirmed. Mac USB registry showed no iPhone at interval start and end. No phone/debugger calls during interval. User checked Maps before StikDebug and reported Still at Apple Park/Cupertino.",
+    "limits": "One passing 10m28s locked interval only; no overnight/OS-termination/reboot/expiry guarantee. Prior candidate failed. No Location Probe or other-app observation. Explicit restore subsequently passed with real-location Maps confirmation."
+  },
+  {
+    "app": "Apple Maps",
+    "outcome": "location_ui_behavior_observed",
+    "physical_device": "iPhone18,2 / iOS 26.4",
+    "recorded_at": "2026-11-07T08:55:51Z",
+    "method": "StikDebug CLBackgroundActivitySession candidate Restore Real GPS with USB unplugged",
+    "stikdebug_base_commit": "395c4d5a0b5960536c22564f948049122383f3fb",
+    "local_changes": true,
+    "phase": "final_candidate_restore",
+    "result": "passed",
+    "evidence": "After the passing unplugged 10m28s locked test, user reported Restore worked. In response to a separate instruction to open Maps, tap current-location arrow and wait about 15 seconds, user confirmed Yes, back at my real location.",
+    "limits": "Maps blue-dot verification only. No real-location coordinates recorded, no Location Probe source-information reading, and no other-app claim."
+  }
+]

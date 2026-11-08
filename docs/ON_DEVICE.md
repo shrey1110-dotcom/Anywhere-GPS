@@ -1,5 +1,11 @@
 # On-device operation
 
+Use your own iPhone for harmless map pranks with friends: pick a surprising
+location, show it in Maps, then restore real GPS. After initial Mac/Xcode setup,
+the on-device flow needs only the iPhone with LocalDevVPN connected. Free
+signing lasts up to seven days per profile before renewal on the Mac; this is
+not a claim that a simulation was tested continuously for a week.
+
 The phone route uses a local source build of
 [StikDebug](https://github.com/StikDebug/StikDebug), a separately installed
 LocalDevVPN, and Apple's free Xcode Personal Team. It is separate from the Mac

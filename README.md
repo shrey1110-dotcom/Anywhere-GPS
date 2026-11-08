@@ -10,19 +10,30 @@
 </p>
 
 <h1 align="center">Anywhere GPS</h1>
-<p align="center">Choose a place. Simulate it on your own iPhone. Restore real GPS when you're done.</p>
+<p align="center">Harmless map pranks with friends, using your own iPhone.</p>
 <p align="center">
-  <a href="#quick-start-on-mac">Quick start</a> ·
-  <a href="docs/ON_DEVICE.md">On-device guide</a> ·
+  <a href="docs/ON_DEVICE.md">Get started on iPhone</a> ·
+  <a href="#quick-start-on-mac">Mac app</a> ·
   <a href="docs/TEST_RESULTS.md">Hardware evidence</a> ·
   <a href="docs/PRIVACY.md">Privacy</a> ·
   <a href="ARCHITECTURE.md">Architecture</a>
 </p>
 
-Anywhere GPS is an experimental location-simulation toolkit for development and
-personal testing on a phone you own. It includes a local Mac app with a
-React/Leaflet map, a FastAPI backend over Apple's developer location service,
-and reproducible patches for a separately built on-device StikDebug app.
+Anywhere GPS lets you put your own iPhone somewhere unexpected for a harmless
+map prank with friends. Pick a place, show the simulated location in Apple Maps,
+and restore real GPS when the joke is over.
+
+**Just your iPhone for everyday use, after initial setup on a Mac.** The on-device
+build runs on your phone with LocalDevVPN; the tested flow needs no attached Mac
+or USB cable. Initial installation and free-signing renewal use Xcode on a Mac.
+
+**Up to seven days per free signing profile.** Renew through Xcode before the
+app's actual expiry, keeping the same bundle ID. Seven days is the signing
+window; continuous week-long operation has not been tested.
+
+This experimental project includes reproducible patches for the on-device
+StikDebug build, plus an optional local Mac app with a React/Leaflet map and
+FastAPI backend over Apple's developer location service.
 
 No jailbreak or paid signing is required for the tested flow. Map, search,
 developer-image and signing features can make external requests; see the

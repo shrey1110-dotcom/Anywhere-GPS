@@ -158,8 +158,9 @@ tests/                Mock-device regression suite
 docs/                 Guides, privacy, test evidence and publication history
 ```
 
-The [publication history](docs/HISTORY.md) is a current-dated import of existing
-local work, organized for review rather than backdated to imitate development.
+The [publication history](docs/HISTORY.md) imports existing local work, with
+author and committer dates reconstructed unevenly across November 1–7, 2026 at
+the owner's request. The November 8 reconstruction is documented separately.
 Private handoffs and device credentials are excluded.
 
 ## Privacy and intended use

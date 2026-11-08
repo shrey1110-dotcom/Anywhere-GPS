@@ -20,5 +20,7 @@ limited safeguards, not a claim of exhaustive security review.
 
 The final Git index is required to match the public working files. Private
 handoffs remain ignored locally. Commit author addresses use a GitHub noreply
-identity. The import history uses current timestamps and contains no empty or
-backdated activity commits; see [HISTORY.md](HISTORY.md).
+identity. Author and committer dates were subsequently reconstructed across
+November 1–7 at the owner's request; the actual rewrite occurred November 8.
+All 117 imported source trees were checked for exact equivalence to the backed-up
+history. See [HISTORY.md](HISTORY.md) for the uneven distribution and limits.
